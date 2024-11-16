@@ -3,5 +3,7 @@ from . import views
 
 urlpatterns = [
     path('register/', views.register_user, name='register_user'),
-    path('login/', views.login_user, name='login_user'),  # Added login endpoint
+    path('login/', views.login_user, name='login_user'),
+    path('authorize_user/', views.authorize_user, name='authorize_user'),
 ]
+

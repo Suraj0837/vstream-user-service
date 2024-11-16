@@ -6,7 +6,8 @@ from .models import User
 from django.contrib.auth.hashers import make_password, check_password
 from django.utils import timezone
 from uuid import uuid4
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
+from rest_framework.exceptions import AuthenticationFailed
 
 @csrf_exempt  # Disable CSRF for testing, for production, use proper CSRF protection
 def register_user(request):
@@ -95,6 +96,38 @@ def login_user(request):
             return JsonResponse({'error': 'Invalid JSON format'}, status=400)
         except Exception as e:
             print("An unexpected error occurred:")
+            traceback.print_exc()
+            return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
+
+    return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
+
+@csrf_exempt
+def authorize_user(request):
+    """
+    API to validate Bearer token from Authorization header.
+    """
+    if request.method == 'POST':
+        try:
+            # Extract Authorization header
+            auth_header = request.headers.get('Authorization')
+            if not auth_header or not auth_header.startswith('Bearer '):
+                return JsonResponse({'error': 'Authorization header missing or invalid'}, status=401)
+
+            # Extract the token
+            token = auth_header.split(' ')[1]
+
+            # Validate the token
+            try:
+                decoded_token = AccessToken(token)
+                user_id = decoded_token['user_id']  # Assuming `user_id` is in the payload
+                return JsonResponse({'message': 'Authorization successful', 'user_id': user_id}, status=200)
+            except Exception:
+                raise AuthenticationFailed('Invalid or expired token')
+
+        except AuthenticationFailed as e:
+            return JsonResponse({'error': str(e)}, status=401)
+        except Exception:
+            print("An unexpected error occurred during authorization:")
             traceback.print_exc()
             return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
 
