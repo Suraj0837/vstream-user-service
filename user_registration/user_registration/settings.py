@@ -25,8 +25,7 @@ SECRET_KEY = 'django-insecure-*gl0xl5jbo^*($@5%xrfle+$t5jf#840wfsf#7i^d)+y3zbxw2
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '10.42.0.225']
 
 # Application definition
 
@@ -53,7 +52,16 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
+    "http://10.17.35.84",
     "http://localhost:3000",  # Frontend URL
+]
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOW_HEADERS = [
+    "Authorization",
+    "Content-Type",
 ]
 
 # If using Django 4.0+ or higher:

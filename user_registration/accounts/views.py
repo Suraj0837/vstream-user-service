@@ -81,6 +81,9 @@ def login_user(request):
 
             # Generate JWT token
             refresh = RefreshToken.for_user(user)
+            refresh['username'] = user.email  # Add username
+            refresh['full_name'] = user.full_name
+
 
             # Return the token and success response
             return JsonResponse({
@@ -132,3 +135,132 @@ def authorize_user(request):
             return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
 
     return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
+
+@csrf_exempt
+def modify_user(request):
+    """
+    API to modify user details except email.
+    The user must be authenticated using a valid token.
+    """
+    if request.method == 'PUT':
+        try:
+            # Extract Authorization header
+            auth_header = request.headers.get('Authorization')
+            if not auth_header or not auth_header.startswith('Bearer '):
+                return JsonResponse({'error': 'Authorization header missing or invalid'}, status=401)
+
+            # Extract and validate the token
+            token = auth_header.split(' ')[1]
+            try:
+                decoded_token = AccessToken(token)
+                user_id = decoded_token['user_id']
+            except Exception:
+                raise AuthenticationFailed('Invalid or expired token')
+
+            # Fetch the user from the database
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return JsonResponse({'error': 'User does not exist'}, status=404)
+
+            # Parse request data
+            data = json.loads(request.body)
+            name = data.get('name')
+            dob = data.get('dob')
+            password = data.get('password')
+
+            # Update fields if provided
+            if name:
+                user.full_name = name
+            if dob:
+                user.date_of_birth = dob
+            if password:
+                user.password = make_password(password)
+
+            user.modified_on = timezone.now()
+            user.save()
+
+            return JsonResponse({'message': 'User details updated successfully'}, status=200)
+
+        except AuthenticationFailed as e:
+            return JsonResponse({'error': str(e)}, status=401)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON format'}, status=400)
+        except Exception:
+            print("An unexpected error occurred during modification:")
+            traceback.print_exc()
+            return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
+
+    return JsonResponse({'error': 'Only PUT method is allowed'}, status=405)
+
+@csrf_exempt
+def delete_user(request):
+    """
+    API to delete a user. The user must be authenticated using a valid token.
+    """
+    if request.method == 'DELETE':
+        try:
+            # Extract Authorization header
+            auth_header = request.headers.get('Authorization')
+            if not auth_header or not auth_header.startswith('Bearer '):
+                return JsonResponse({'error': 'Authorization header missing or invalid'}, status=401)
+
+            # Extract and validate the token
+            token = auth_header.split(' ')[1]
+            try:
+                decoded_token = AccessToken(token)
+                user_id = decoded_token['user_id']
+            except Exception:
+                raise AuthenticationFailed('Invalid or expired token')
+
+            # Fetch the user from the database
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return JsonResponse({'error': 'User does not exist'}, status=404)
+
+            # Delete the user
+            user.delete()
+            return JsonResponse({'message': 'User deleted successfully'}, status=200)
+
+        except AuthenticationFailed as e:
+            return JsonResponse({'error': str(e)}, status=401)
+        except Exception:
+            print("An unexpected error occurred during deletion:")
+            traceback.print_exc()
+            return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
+
+    return JsonResponse({'error': 'Only DELETE method is allowed'}, status=405)
+
+@csrf_exempt
+def get_full_name(request):
+    """
+    API to fetch the full name of a user by their user_id from query parameters.
+    Example: GET /get_full_name/?user_id=<user_id>
+    """
+    if request.method == 'GET':
+        try:
+            # Get user_id from query parameters
+            user_id = request.GET.get('user_id')
+
+            if not user_id:
+                return JsonResponse({'error': 'user_id query parameter is required'}, status=400)
+
+            # Fetch the user from the database
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return JsonResponse({'error': 'User not found'}, status=404)
+
+            # Return the full name and user_id
+            return JsonResponse({
+                'user_id': user.id,
+                'full_name': user.full_name
+            }, status=200)
+
+        except Exception as e:
+            print("An unexpected error occurred while fetching the full name:")
+            traceback.print_exc()
+            return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
+
+    return JsonResponse({'error': 'Only GET method is allowed'}, status=405)
