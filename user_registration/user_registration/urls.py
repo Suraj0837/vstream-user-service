@@ -20,6 +20,6 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('vstream_user_service/', include('accounts.urls')),
+    path('vstream-user-service/', include('accounts.urls')),
 ]
 
